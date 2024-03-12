@@ -1,11 +1,4 @@
-amba
-cpu
-dev
-filelist
-run
-script
-tb
-top
+gen
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
