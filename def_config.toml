@@ -1,0 +1,57 @@
+# this is a config for soc generator.
+name    = "SoC Inst Name"
+version = ""
+author  = ""
+
+[core]
+dir = "cpu"
+file = "ysyx_xxxxxxxx.v"
+top  = "ysyx_xxxxxxxx"
+
+[rcu]
+dir = "rcu"
+pll_num = 1
+bypass  = 'on'
+[rcu.core_clk]
+freq_list = [25, 50, 100, 150, 200, 250, 300]
+[rcu.perip_clk]
+freq_list = [100]
+
+[bus]
+dir = "bus"
+[bus.mst]
+num = 1
+[[bus.mst.list]]
+name = "core_master"
+prot = "axi4"
+[bus.slv]
+num = 3
+[[bus.slv.list]]
+name = "uart_slave"
+prot = "apb"
+burst = false
+[[bus.slv.list]]
+name = "spi_slave"
+prot = "apb"
+burst = false
+[[bus.slv.list]]
+name = "chiplink_slave"
+prot = "axi4"
+
+[ip]
+dir = "perip"
+# tag and commit field is optional
+[ip.common]
+repo = "https://github.com/oscc-ip/common"
+branch = "main"
+commit = "lastest"
+
+[ip.archinfo]
+repo = "https://github.com/oscc-ip/archinfo"
+branch = "main"
+commit = "lastest"
+
+[ip.gpio]
+repo = "https://github.com/oscc-ip/gpio"
+branch = "main"
+commit = "lastest"
