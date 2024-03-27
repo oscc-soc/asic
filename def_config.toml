@@ -2,6 +2,7 @@
 name    = "SoC Inst Name"
 version = ""
 author  = ""
+gen_dir = "gen"
 
 [core]
 dir = "cpu"
@@ -28,11 +29,11 @@ prot = "axi4"
 num = 3
 [[bus.slv.list]]
 name = "uart_slave"
-prot = "apb"
+prot = "apb4"
 burst = false
 [[bus.slv.list]]
 name = "spi_slave"
-prot = "apb"
+prot = "apb4"
 burst = false
 [[bus.slv.list]]
 name = "chiplink_slave"
