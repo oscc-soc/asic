@@ -80,7 +80,7 @@ class _TreeIteratorBase:
 
 class PreOrderTreeIterator(_TreeIteratorBase):
     def _iter_tree(self, tree: Optional['Node']) -> Iterable['Node']:
-        if self.filter_(tree):
+        if tree and self.filter_(tree):
             yield tree
         for child in self._iter_children(tree):
             yield from self._iter_tree(child)
@@ -90,7 +90,7 @@ class PostOrderTreeIterator(_TreeIteratorBase):
     def _iter_tree(self, tree: Optional['Node']) -> Iterable['Node']:
         for child in self._iter_children(tree):
             yield from self._iter_tree(child)
-        if self.filter_(tree):
+        if tree and self.filter_(tree):
             yield tree
 
 
@@ -99,7 +99,7 @@ class LevelOrderTreeIterator(_TreeIteratorBase):
         queue = collections.deque([tree])
         while len(queue) > 0:
             n = queue.popleft()
-            if self.filter_(n):
+            if n and self.filter_(n):
                 yield n
             queue.extend(self._iter_children(n))
 
@@ -137,7 +137,7 @@ class Node(anytree.NodeMixin):
         if ((start is not None) and (end is not None) and sd and sd.source_code
                 and end <= len(sd.source_code)):
             return sd.source_code[start:end].decode('utf-8')
-        return ""
+        return ''
 
     def __repr__(self) -> str:
         return VERIBLE_PARSER_SEQ.sub("", self.to_formatted_string())
@@ -286,12 +286,12 @@ class LeafNode(Node):
     This specific class is used for null nodes.
     """
     @property
-    def start(self) -> None:
+    def start(self) -> Optional[int]:
         """Byte offset of token's first character in source text"""
         return None
 
     @property
-    def end(self) -> None:
+    def end(self) -> Optional[int]:
         """Byte offset of a character just past the token in source text."""
         return None
 
@@ -318,11 +318,11 @@ class TokenNode(LeafNode):
         self._end = end
 
     @property
-    def start(self) -> int:
+    def start(self) -> Optional[int]:
         return self._start
 
     @property
-    def end(self) -> int:
+    def end(self) -> Optional[int]:
         return self._end
 
     def to_formatted_string(self) -> str:
@@ -398,7 +398,7 @@ class Error:
 
 @dataclasses.dataclass
 class SyntaxData:
-    source_code: Optional[str] = None
+    source_code: Optional[bytes] = None
     tree: Optional[RootNode] = None
     tokens: Optional[List[Token]] = None
     rawtokens: Optional[List[Token]] = None

@@ -56,9 +56,11 @@ def process_file_data(path: str, data: verible_parser.SyntaxData):
     for module in data.tree.iter_find_all({'tag': 'kModuleDeclaration'}):
         mod_info = ModuleInfo(path, '', '', '', [], [])
 
-        for inc in data.tree.iter_find_all({'tag': 'kPreprocessorInclude'}):
+        for inc in data.tree.iter_find_all({'tag': ['kPreprocessorInclude']},
+                                           iter_=anytree.PreOrderIter):
             if inc:
-                print(f'inc: {inc}')
+                tmp_inc = inc.find({'tag': ['TK_StringLiteral']})
+                print(f'tmp_inc: {tmp_inc.text}')
         # Find module header
         header = module.find({'tag': 'kModuleHeader'})
         if not header:
