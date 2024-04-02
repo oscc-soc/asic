@@ -27,71 +27,100 @@
 # See the Mulan PSL v2 for more details.
 
 import sys
+import os
+from typing import List
 import anytree
 import verible_parser
+
+
+class ModuleInfo(object):
+    def __init__(self, path: str, raw: str, inc: str, name: str,
+                 para: List[str], ports: List[str]):
+        self.path = path
+        self.raw = raw
+        self.inc = inc
+        self.name = name
+        self.para = para
+        self.ports = ports
+
+    def __str__(self) -> str:
+        return f'path: {self.path} name: {self.name} para: {self.para}'
 
 
 def process_file_data(path: str, data: verible_parser.SyntaxData):
     if not data.tree:
         return
 
-    modules_info = []
+    mod_infos = []
     # Collect information about each module declaration in the file
     for module in data.tree.iter_find_all({'tag': 'kModuleDeclaration'}):
-        module_info = {
-            'header_text': "",
-            'name': "",
-            'ports': [],
-            'parameters': [],
-            'imports': [],
-        }
+        mod_info = ModuleInfo(path, '', '', '', [], [])
 
+        for inc in data.tree.iter_find_all({'tag': 'kPreprocessorInclude'}):
+            if inc:
+                print(f'inc: {inc}')
         # Find module header
         header = module.find({'tag': 'kModuleHeader'})
         if not header:
             continue
-        module_info['header_text'] = header.text
+
+        mod_info.raw = header.text
 
         # Find module name
         name = header.find({'tag': ['SymbolIdentifier', 'EscapedIdentifier']},
                            iter_=anytree.PreOrderIter)
         if not name:
             continue
-        module_info['name'] = name.text
-        print(f'name.text={name.text}')
+
+        mod_info.name = name.text
+
         # Get the list of ports
         for port in header.iter_find_all(
             {'tag': ['kPortDeclaration', 'kPort']}):
             port_id = port.find(
                 {'tag': ['SymbolIdentifier', 'EscapedIdentifier']})
-            module_info['ports'].append(port_id.text)
+            mod_info.ports.append(port_id.text)
 
         # Get the list of parameters
         for param in header.iter_find_all({'tag': ['kParamDeclaration']}):
             param_id = param.find(
                 {'tag': ['SymbolIdentifier', 'EscapedIdentifier']})
-            module_info['parameters'].append(param_id.text)
+            mod_info.para.append(param_id.text)
 
         # Get the list of imports
-        for pkg in module.iter_find_all({'tag': ['kPackageImportItem']}):
-            module_info['imports'].append(pkg.text)
+        # for pkg in module.iter_find_all({'tag': ['kPackageImportItem']}):
+        #     modi
+        #     module_info['imports'].append(pkg.text)
 
-        modules_info.append(module_info)
+        mod_infos.append(mod_info)
 
-    # Print results
-    if len(modules_info) > 0:
-        print(path)
+    with open('sub_system.sv', 'a+', encoding='utf-8') as fp:
+        for inst_info in mod_infos:
+            print(f'path:       {inst_info.path}')
+            print(f'name:       {inst_info.name}')
+            print(f'parameters: {inst_info.para}')
+            print(f'ports:      {inst_info.ports}')
+            # print(f'imports:    {inst_info["imports"]}')
+            # print(f'raw:         {inst_info.raw}')
 
-    def print_entry(key, values):
-        print(key)
-        print(values)
+            res = inst_info.name
+            # res = 'apb4_uart '
+            if len(inst_info.para) > 0:
+                res += ' #('
+                for v in enumerate(inst_info.para):
+                    if v[0] > 0:
+                        res += ','
+                    res += f'.{v[1]}({v[1]})'
+                res += ')'
 
-    for module_info in modules_info:
-        print_entry("name:       ", [module_info['name']])
-        print_entry("ports:      ", module_info['ports'])
-        print_entry("parameters: ", module_info['parameters'])
-        print_entry("imports:    ", module_info['imports'])
-        print(f"\033[97m{module_info['header_text']}\033[0m\n")
+            res += f' u_{inst_info.name}('
+            for v in enumerate(inst_info.ports):
+                if v[0] > 0:
+                    res += ','
+                res += f'.{v[1]}({v[1]})'
+            res += ');'
+            # print(f'res: {res}')
+            fp.writelines(res)
 
 
 def main():
@@ -99,14 +128,29 @@ def main():
         print(f"Usage: {sys.argv[0]} VERILOG_FILE [VERILOG_FILE [...]]")
         return 1
 
-    parser_path = '/home/liaoyuchi/Desktop/verible-v0.0-3410-g398a8505/bin/verible-verilog-syntax'
+    verible_bin_path = '/home/liaoyuchi/Desktop/verible-v0.0-3410-g398a8505/bin'
+    parser_path = f'{verible_bin_path}/verible-verilog-syntax'
+    format_path = f'{verible_bin_path}/verible-verilog-format'
     files = sys.argv[1:]
 
     parser = verible_parser.VeribleParser(exec_path=parser_path)
     data = parser.parse_files(files)
 
+    with open('sub_system.sv', 'w+', encoding='utf-8') as fp:
+        res = 'module sub_system();'
+        fp.writelines(res)
+
     for file_path, file_data in data.items():
         process_file_data(file_path, file_data)
+
+    fmt_cfg = '--assignment_statement_alignment align --case_items_alignment align --class_member_variable_alignment align --distribution_items_alignment align --enum_assignment_statement_alignment align --formal_parameters_alignment align --module_net_variable_alignment align --named_parameter_alignment align --named_port_alignment align --port_declarations_alignment align --struct_union_members_alignment align'
+    fmt_cfg += ' --inplace'
+    # print(f'fmt_cfg: {fmt_cfg}')
+
+    with open('sub_system.sv', 'a+', encoding='utf-8') as fp:
+        fp.writelines('endmodule')
+
+    os.system(f'{format_path} {fmt_cfg} sub_system.sv')
 
 
 if __name__ == '__main__':

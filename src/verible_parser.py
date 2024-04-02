@@ -136,7 +136,7 @@ class Node(anytree.NodeMixin):
         sd = self.syntax_data
         if ((start is not None) and (end is not None) and sd and sd.source_code
                 and end <= len(sd.source_code)):
-            return sd.source_code[start:end]
+            return sd.source_code[start:end].decode('utf-8')
         return ""
 
     def __repr__(self) -> str:
@@ -368,7 +368,7 @@ class Token:
         """Token text in source code."""
         sd = self.syntax_data
         if sd and sd.source_code and self.end <= len(sd.source_code):
-            return sd.source_code[self.start:self.end]
+            return sd.source_code[self.start:self.end].decode('utf-8')
         return ""
 
     def __repr__(self) -> str:
