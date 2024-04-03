@@ -8,38 +8,38 @@ version = ""
 author  = ""
 
 [core]
-dir = "core"
+path = "core"
 file = "ysyx_xxxxxxxx.v"
 top  = "ysyx_xxxxxxxx"
 
 [ram]
-dir = "ram"
+path = "ram"
 
 [filelist]
-dir = "filelist"
+path = "filelist"
 backend = "backend"
 sim = "sim"
 
 [top]
-dir = "top"
+path = "top"
 
 [tb]
-dir = "tb"
+path = "tb"
 
 [sim]
-dir = "sim"
+path = "sim"
 
 [rcu]
-dir = "rcu"
+path = "rcu"
 pll_num = 1
-bypass  = 'on'
+bypass  = true
 [rcu.core_clk]
 freq_list = [25, 50, 100, 150, 200, 250, 300]
 [rcu.perip_clk]
 freq_list = [100]
 
 [bus]
-dir = "bus"
+path = "bus"
 [bus.mst]
 num = 1
 [[bus.mst.list]]
@@ -60,22 +60,22 @@ name = "chiplink_slave"
 prot = "axi4"
 
 [ip]
-dir = "perip"
+path = "perip"
 # tag and commit field is optional
 [ip.common]
 repo = "https://github.com/oscc-ip/common"
 branch = "main"
 commit = "lastest"
-pinmux = "off"
+pinmux = false
 
 [ip.archinfo]
 repo = "https://github.com/oscc-ip/archinfo"
 branch = "main"
 commit = "lastest"
-pinmux = "off"
+pinmux = false
 
 [ip.gpio]
 repo = "https://github.com/oscc-ip/gpio"
 branch = "main"
 commit = "lastest"
-pinmux = "off"
+pinmux = false
