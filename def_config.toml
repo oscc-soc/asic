@@ -1,13 +1,33 @@
 # this is a config for soc generator.
-name    = "SoC Inst Name"
+name    = "soc"
+user    = "oscc"
+process = "t28"
+date    = "202404"
+gen_dir = "gen"
 version = ""
 author  = ""
-gen_dir = "gen"
 
 [core]
-dir = "cpu"
+dir = "core"
 file = "ysyx_xxxxxxxx.v"
 top  = "ysyx_xxxxxxxx"
+
+[ram]
+dir = "ram"
+
+[filelist]
+dir = "filelist"
+backend = "backend"
+sim = "sim"
+
+[top]
+dir = "top"
+
+[tb]
+dir = "tb"
+
+[sim]
+dir = "sim"
 
 [rcu]
 dir = "rcu"
