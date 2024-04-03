@@ -34,33 +34,51 @@ import verible_parser
 
 
 class ModuleInfo(object):
-    def __init__(self, path: str, raw: str, inc: str, name: str,
-                 para: List[str], ports: List[str]):
-        self.path = path
+    def __init__(self, raw: str, name: str, paras: List[str],
+                 ports: List[str]):
         self.raw = raw
-        self.inc = inc
         self.name = name
-        self.para = para
+        self.paras = paras
         self.ports = ports
 
     def __str__(self) -> str:
-        return f'path: {self.path} name: {self.name} para: {self.para}'
+        return f'''raw: {self.raw} name: {self.name}
+                   paras: {self.paras} ports: {self.ports}'''
 
 
-def process_file_data(path: str, data: verible_parser.SyntaxData):
+class SVFileInfo(object):
+    def __init__(
+        self,
+        path: str,
+        inc: List[str],
+        mod: List[ModuleInfo],
+    ) -> None:
+        self.path = path
+        self.inc = inc
+        self.mod = mod
+
+    def __str__(self) -> str:
+        return f'path: {self.path} inc: {self.inc} mod: {self.mod}'
+
+
+def parse_sv_file(path: str, data: verible_parser.SyntaxData):
     if not data.tree:
         return
+
+    svfile_info = SVFileInfo(path, [], [])
+
+    inc_infos = []
+    for inc in data.tree.iter_find_all({'tag': ['kPreprocessorInclude']},
+                                       iter_=anytree.PreOrderIter):
+        if inc:
+            tmp_inc = inc.find({'tag': ['TK_StringLiteral']})
+            inc_infos.append(tmp_inc.text)
 
     mod_infos = []
     # Collect information about each module declaration in the file
     for module in data.tree.iter_find_all({'tag': 'kModuleDeclaration'}):
-        mod_info = ModuleInfo(path, '', '', '', [], [])
+        mod_info = ModuleInfo('', '', '', [], [])
 
-        for inc in data.tree.iter_find_all({'tag': ['kPreprocessorInclude']},
-                                           iter_=anytree.PreOrderIter):
-            if inc:
-                tmp_inc = inc.find({'tag': ['TK_StringLiteral']})
-                print(f'tmp_inc: {tmp_inc.text}')
         # Find module header
         header = module.find({'tag': 'kModuleHeader'})
         if not header:
@@ -87,7 +105,7 @@ def process_file_data(path: str, data: verible_parser.SyntaxData):
         for param in header.iter_find_all({'tag': ['kParamDeclaration']}):
             param_id = param.find(
                 {'tag': ['SymbolIdentifier', 'EscapedIdentifier']})
-            mod_info.para.append(param_id.text)
+            mod_info.paras.append(param_id.text)
 
         # Get the list of imports
         # for pkg in module.iter_find_all({'tag': ['kPackageImportItem']}):
@@ -96,27 +114,38 @@ def process_file_data(path: str, data: verible_parser.SyntaxData):
 
         mod_infos.append(mod_info)
 
-    with open('sub_system.sv', 'a+', encoding='utf-8') as fp:
-        for inst_info in mod_infos:
-            print(f'path:       {inst_info.path}')
-            print(f'name:       {inst_info.name}')
-            print(f'parameters: {inst_info.para}')
-            print(f'ports:      {inst_info.ports}')
-            # print(f'imports:    {inst_info["imports"]}')
-            # print(f'raw:         {inst_info.raw}')
+    svfile_info.inc = inc_infos
+    svfile_info.mod = mod_infos
 
-            res = inst_info.name
+def integ_soc():
+    with open('sub_system.sv', 'w+', encoding='utf-8') as fp:
+        res = 'module sub_system();'
+        fp.writelines(res)
+
+    with open('sub_system.sv', 'a+', encoding='utf-8') as fp:
+        for inc in svfile_info.inc:
+            print(f'inc: {inc}')
+            fp.writelines(f'`include {inc}')
+
+        for mod in svfile_info.mod:
+            print(f'name:       {mod.name}')
+            print(f'parameters: {mod.paras}')
+            print(f'ports:      {mod.ports}')
+            # print(f'imports:    {mod["imports"]}')
+            # print(f'raw:         {mod.raw}')
+
+            res = mod.name
             # res = 'apb4_uart '
-            if len(inst_info.para) > 0:
+            if len(mod.paras) > 0:
                 res += ' #('
-                for v in enumerate(inst_info.para):
+                for v in enumerate(mod.paras):
                     if v[0] > 0:
                         res += ','
                     res += f'.{v[1]}({v[1]})'
                 res += ')'
 
-            res += f' u_{inst_info.name}('
-            for v in enumerate(inst_info.ports):
+            res += f' u_{mod.name}('
+            for v in enumerate(mod.ports):
                 if v[0] > 0:
                     res += ','
                 res += f'.{v[1]}({v[1]})'
@@ -124,6 +153,8 @@ def process_file_data(path: str, data: verible_parser.SyntaxData):
             # print(f'res: {res}')
             fp.writelines(res)
 
+    with open('sub_system.sv', 'a+', encoding='utf-8') as fp:
+        fp.writelines('endmodule')
 
 def main():
     if len(sys.argv) < 2:
@@ -138,20 +169,12 @@ def main():
     parser = verible_parser.VeribleParser(exec_path=parser_path)
     data = parser.parse_files(files)
 
-    with open('sub_system.sv', 'w+', encoding='utf-8') as fp:
-        res = 'module sub_system();'
-        fp.writelines(res)
-
     for file_path, file_data in data.items():
-        process_file_data(file_path, file_data)
+        parse_sv_file(file_path, file_data)
 
     fmt_cfg = '--assignment_statement_alignment align --case_items_alignment align --class_member_variable_alignment align --distribution_items_alignment align --enum_assignment_statement_alignment align --formal_parameters_alignment align --module_net_variable_alignment align --named_parameter_alignment align --named_port_alignment align --port_declarations_alignment align --struct_union_members_alignment align'
     fmt_cfg += ' --inplace'
     # print(f'fmt_cfg: {fmt_cfg}')
-
-    with open('sub_system.sv', 'a+', encoding='utf-8') as fp:
-        fp.writelines('endmodule')
-
     os.system(f'{format_path} {fmt_cfg} sub_system.sv')
 
 
