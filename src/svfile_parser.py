@@ -28,94 +28,71 @@
 
 import sys
 import os
-from typing import List
 import anytree
 import verible_parser
 
 
-class ModuleInfo(object):
-    def __init__(self, raw: str, name: str, paras: List[str],
-                 ports: List[str]):
-        self.raw = raw
-        self.name = name
-        self.paras = paras
-        self.ports = ports
+class SVFileParser(object):
+    def __init__(self):
+        pass
 
-    def __str__(self) -> str:
-        return f'''raw: {self.raw} name: {self.name}
-                   paras: {self.paras} ports: {self.ports}'''
+    def parse_sv_file(self, path: str, data: verible_parser.SyntaxData):
+        if not data.tree:
+            return
 
+        svfile_info = SVFileInfo(path, [], [])
 
-class SVFileInfo(object):
-    def __init__(
-        self,
-        path: str,
-        inc: List[str],
-        mod: List[ModuleInfo],
-    ) -> None:
-        self.path = path
-        self.inc = inc
-        self.mod = mod
+        inc_infos = []
+        for inc in data.tree.iter_find_all({'tag': ['kPreprocessorInclude']},
+                                           iter_=anytree.PreOrderIter):
+            if inc:
+                tmp_inc = inc.find({'tag': ['TK_StringLiteral']})
+                inc_infos.append(tmp_inc.text)
 
-    def __str__(self) -> str:
-        return f'path: {self.path} inc: {self.inc} mod: {self.mod}'
+        mod_infos = []
+        # Collect information about each module declaration in the file
+        for module in data.tree.iter_find_all({'tag': 'kModuleDeclaration'}):
+            mod_info = ModuleInfo('', '', '', [], [])
 
+            # Find module header
+            header = module.find({'tag': 'kModuleHeader'})
+            if not header:
+                continue
 
-def parse_sv_file(path: str, data: verible_parser.SyntaxData):
-    if not data.tree:
-        return
+            mod_info.raw = header.text
 
-    svfile_info = SVFileInfo(path, [], [])
+            # Find module name
+            name = header.find(
+                {'tag': ['SymbolIdentifier', 'EscapedIdentifier']},
+                iter_=anytree.PreOrderIter)
+            if not name:
+                continue
 
-    inc_infos = []
-    for inc in data.tree.iter_find_all({'tag': ['kPreprocessorInclude']},
-                                       iter_=anytree.PreOrderIter):
-        if inc:
-            tmp_inc = inc.find({'tag': ['TK_StringLiteral']})
-            inc_infos.append(tmp_inc.text)
+            mod_info.name = name.text
 
-    mod_infos = []
-    # Collect information about each module declaration in the file
-    for module in data.tree.iter_find_all({'tag': 'kModuleDeclaration'}):
-        mod_info = ModuleInfo('', '', '', [], [])
+            # Get the list of ports
+            for port in header.iter_find_all(
+                {'tag': ['kPortDeclaration', 'kPort']}):
+                port_id = port.find(
+                    {'tag': ['SymbolIdentifier', 'EscapedIdentifier']})
+                mod_info.ports.append(port_id.text)
 
-        # Find module header
-        header = module.find({'tag': 'kModuleHeader'})
-        if not header:
-            continue
+            # Get the list of parameters
+            for param in header.iter_find_all({'tag': ['kParamDeclaration']}):
+                param_id = param.find(
+                    {'tag': ['SymbolIdentifier', 'EscapedIdentifier']})
+                mod_info.paras.append(param_id.text)
 
-        mod_info.raw = header.text
+            # Get the list of imports
+            # for pkg in module.iter_find_all({'tag': ['kPackageImportItem']}):
+            #     modi
+            #     module_info['imports'].append(pkg.text)
 
-        # Find module name
-        name = header.find({'tag': ['SymbolIdentifier', 'EscapedIdentifier']},
-                           iter_=anytree.PreOrderIter)
-        if not name:
-            continue
+            mod_infos.append(mod_info)
 
-        mod_info.name = name.text
+        svfile_info.inc = inc_infos
+        svfile_info.mod = mod_infos
 
-        # Get the list of ports
-        for port in header.iter_find_all(
-            {'tag': ['kPortDeclaration', 'kPort']}):
-            port_id = port.find(
-                {'tag': ['SymbolIdentifier', 'EscapedIdentifier']})
-            mod_info.ports.append(port_id.text)
-
-        # Get the list of parameters
-        for param in header.iter_find_all({'tag': ['kParamDeclaration']}):
-            param_id = param.find(
-                {'tag': ['SymbolIdentifier', 'EscapedIdentifier']})
-            mod_info.paras.append(param_id.text)
-
-        # Get the list of imports
-        # for pkg in module.iter_find_all({'tag': ['kPackageImportItem']}):
-        #     modi
-        #     module_info['imports'].append(pkg.text)
-
-        mod_infos.append(mod_info)
-
-    svfile_info.inc = inc_infos
-    svfile_info.mod = mod_infos
 
 def integ_soc():
     with open('sub_system.sv', 'w+', encoding='utf-8') as fp:
@@ -156,11 +133,8 @@ def integ_soc():
     with open('sub_system.sv', 'a+', encoding='utf-8') as fp:
         fp.writelines('endmodule')
 
-def main():
-    if len(sys.argv) < 2:
-        print(f"Usage: {sys.argv[0]} VERILOG_FILE [VERILOG_FILE [...]]")
-        return 1
 
+def main():
     verible_bin_path = '/home/liaoyuchi/Desktop/verible-v0.0-3410-g398a8505/bin'
     parser_path = f'{verible_bin_path}/verible-verilog-syntax'
     format_path = f'{verible_bin_path}/verible-verilog-format'

@@ -62,6 +62,12 @@ class SoCGen(object):
     def gen_ip(self):
         ip_cfg = self.soc_cfg.ip_cfg
         os.system(f'mkdir -p {self.prj_path}/{ip_cfg.path}')
+        os.chdir(f'{self.prj_path}/{ip_cfg.path}')
+        for v in ip_cfg.perip:
+            os.system(f'git clone https://github.com/oscc-ip/{v}')
+
+        os.chdir(global_para.SRC_DIR)
+        
 
     def gen_sub_block(self):
         self.gen_core()
@@ -71,6 +77,7 @@ class SoCGen(object):
         self.gen_tb()
         self.gen_sim()
         self.gen_ip()
+
 
 
 # read config file
