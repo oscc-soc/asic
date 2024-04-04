@@ -62,11 +62,8 @@ class ConfigParser(object):
         tmp_cfg = cfg['ip']
         ip_cfg = IPConfig(tmp_cfg['path'], tmp_cfg['perip'], [])
 
-        soc_cfg = SoCConfig(meta_cfg, core_cfg, ram_cfg, fl_cfg, top_cfg,
-                            tb_cfg, sim_cfg, ip_cfg)
-
-        print(soc_cfg)
-
+        self.soc_cfg = SoCConfig(meta_cfg, core_cfg, ram_cfg, fl_cfg, top_cfg,
+                                 tb_cfg, sim_cfg, ip_cfg)
 
     def check(self):
         self.init()
