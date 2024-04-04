@@ -10,6 +10,12 @@
 # MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 # See the Mulan PSL v2 for more details.
 
+from config_parser import ConfigParser
 
+
+# read config file
+# gen soc project
+# gen sub module(core, rcu, bus, ...ip)
 def main():
-    pass
+    cfg_parser = ConfigParser()
+    cfg_parser.check()
