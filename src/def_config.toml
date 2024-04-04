@@ -1,23 +1,24 @@
 # this is a config for soc generator.
+[meta]
 name    = "soc"
 user    = "oscc"
 process = "t28"
 date    = "202404"
 gen_dir = "gen"
-version = ""
-author  = ""
+version = "0.1"
+author  = "demo"
 
 [core]
 path = "core"
-file = "ysyx_xxxxxxxx.v"
-top  = "ysyx_xxxxxxxx"
+file = "demo.v"
+top  = "demo"
 
 [ram]
 path = "ram"
 
 [filelist]
 path = "filelist"
-backend = "backend"
+be = "be"
 sim = "sim"
 
 [top]
@@ -61,21 +62,19 @@ prot = "axi4"
 
 [ip]
 path = "perip"
+perip = ["common", "archinfo", "gpio"]
 # tag and commit field is optional
 [ip.common]
-repo = "https://github.com/oscc-ip/common"
 branch = "main"
 commit = "lastest"
 pinmux = false
 
 [ip.archinfo]
-repo = "https://github.com/oscc-ip/archinfo"
 branch = "main"
 commit = "lastest"
 pinmux = false
 
 [ip.gpio]
-repo = "https://github.com/oscc-ip/gpio"
 branch = "main"
 commit = "lastest"
 pinmux = false
