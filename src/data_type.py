@@ -11,28 +11,52 @@
 # See the Mulan PSL v2 for more details.
 
 from typing import List
+from enum import IntEnum, unique
 
 
-class ModuleInfo(object):
-    def __init__(self, raw: str, name: str, paras: List[str],
-                 ports: List[str]):
-        self.raw = raw
+@unique
+class PortDir(IntEnum):
+    IN = 0
+    OUT = 1
+    INOUT = 2
+
+
+class SVParam(object):
+    def __init__(self, name: str, defval: str):
         self.name = name
-        self.paras = paras
+        self.defval = defval
+
+    def __str__(self) -> str:
+        return f'name: {self.name} defval: {self.defval}'
+
+
+class SVPort(object):
+    def __init__(self, dire: PortDir, width: str, name: str):
+        self.dire = dire
+        self.width = width
+        self.name = name
+
+    def __str__(self) -> str:
+        return f'dire: {self.dire} width: {self.width} name: {self.name}'
+
+
+class SVModule(object):
+    def __init__(self, name: str, params: List[SVParam], ports: List[SVPort]):
+        self.name = name
+        self.params = params
         self.ports = ports
 
     def __str__(self) -> str:
-        info = f'raw: {self.raw} name: {self.name}'
-        info += f' paras: {self.paras} ports: {self.ports}'
+        info = f'name: {self.name} params: {self.params} ports: {self.ports}'
         return info
 
 
-class SVFileInfo(object):
+class SVFile(object):
     def __init__(
         self,
         path: str,
         inc: List[str],
-        mod: List[ModuleInfo],
+        mod: List[SVModule],
     ):
         self.path = path
         self.inc = inc
