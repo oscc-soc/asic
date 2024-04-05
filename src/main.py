@@ -14,6 +14,7 @@ import os
 from config_parser import ConfigParser
 import global_para
 from config_type import SoCConfig
+from svfile_parser import SVFileParser
 
 
 class SoCGen(object):
@@ -30,10 +31,10 @@ class SoCGen(object):
         self.prj_path += f'/{prj_name}'
         print(self.prj_path)
 
-        if os.path.exists(self.prj_path):
-            os.system(f'rm -rf {self.prj_path}')
+        # if os.path.exists(self.prj_path):
+            # os.system(f'rm -rf {self.prj_path}')
 
-        os.system(f'mkdir -p {self.prj_path}')
+        # os.system(f'mkdir -p {self.prj_path}')
 
     def gen_core(self):
         core_cfg = self.soc_cfg.core_cfg
@@ -64,10 +65,15 @@ class SoCGen(object):
         os.system(f'mkdir -p {self.prj_path}/{ip_cfg.path}')
         os.chdir(f'{self.prj_path}/{ip_cfg.path}')
         for v in ip_cfg.perip:
-            os.system(f'git clone https://github.com/oscc-ip/{v}')
+            # os.system(f'git clone https://github.com/oscc-ip/{v}')
+            pass
 
         os.chdir(global_para.SRC_DIR)
-        
+        svfile_parser = SVFileParser()
+        for v in ip_cfg.perip:
+            abs_path = f'{self.prj_path}/{ip_cfg.path}/{v}'
+            print(f'abs_path: {abs_path}')
+            svfile_parser.update_files(abs_path)
 
     def gen_sub_block(self):
         self.gen_core()
@@ -77,7 +83,6 @@ class SoCGen(object):
         self.gen_tb()
         self.gen_sim()
         self.gen_ip()
-
 
 
 # read config file

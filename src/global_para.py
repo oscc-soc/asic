@@ -14,3 +14,7 @@ import os
 
 SRC_DIR = f'{os.getcwd()}'
 ROOT_DIR = f'{SRC_DIR}/..'
+VERIBLE_PATH = '/home/liaoyuchi/Desktop/verible-v0.0-3410-g398a8505'
+VERIBLE_BIN_PATH = f'{VERIBLE_PATH}/bin'
+VERIBLE_SYNTAX = f'{VERIBLE_BIN_PATH}/verible-verilog-syntax'
+VERIBLE_FORMAT = f'{VERIBLE_BIN_PATH}/verible-verilog-format'

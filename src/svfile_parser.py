@@ -28,19 +28,31 @@
 
 import sys
 import os
+from typing import List
 import anytree
-import verible_parser
+from verible_parser import VeribleParser, SyntaxData
+from data_type import ModuleInfo, SVFileInfo
+import global_para
 
 
 class SVFileParser(object):
     def __init__(self):
-        pass
+        self.files = []
+        self.vb_parser = VeribleParser(global_para.VERIBLE_SYNTAX)
 
-    def parse_sv_file(self, path: str, data: verible_parser.SyntaxData):
+    def update_files(self, path: List[str]):
+        self.files = path
+
+    def gen_ast(self):
+        res = self.vb_parser.parse_files(self.files)
+        for path, data in res.items():
+            self.parse(path, data)
+
+    def parse(self, path: str, data: SyntaxData):
         if not data.tree:
             return
 
-        svfile_info = SVFileInfo(path, [], [])
+        file_info = SVFileInfo(path, [], [])
 
         inc_infos = []
         for inc in data.tree.iter_find_all({'tag': ['kPreprocessorInclude']},
@@ -52,7 +64,7 @@ class SVFileParser(object):
         mod_infos = []
         # Collect information about each module declaration in the file
         for module in data.tree.iter_find_all({'tag': 'kModuleDeclaration'}):
-            mod_info = ModuleInfo('', '', '', [], [])
+            mod_info = ModuleInfo('', '', [], [])
 
             # Find module header
             header = module.find({'tag': 'kModuleHeader'})
@@ -90,8 +102,13 @@ class SVFileParser(object):
 
             mod_infos.append(mod_info)
 
-        svfile_info.inc = inc_infos
-        svfile_info.mod = mod_infos
+        file_info.inc = inc_infos
+        file_info.mod = mod_infos
+
+    def format(self):
+        fmt_cfg = '--assignment_statement_alignment align --case_items_alignment align --class_member_variable_alignment align --distribution_items_alignment align --enum_assignment_statement_alignment align --formal_parameters_alignment align --module_net_variable_alignment align --named_parameter_alignment align --named_port_alignment align --port_declarations_alignment align --struct_union_members_alignment align'
+        fmt_cfg += ' --inplace'
+        os.system(f'{global_para.VERIBLE_FORMAT} {fmt_cfg} sub_system.sv')
 
 
 def integ_soc():
@@ -100,11 +117,11 @@ def integ_soc():
         fp.writelines(res)
 
     with open('sub_system.sv', 'a+', encoding='utf-8') as fp:
-        for inc in svfile_info.inc:
+        for inc in file_info.inc:
             print(f'inc: {inc}')
             fp.writelines(f'`include {inc}')
 
-        for mod in svfile_info.mod:
+        for mod in file_info.mod:
             print(f'name:       {mod.name}')
             print(f'parameters: {mod.paras}')
             print(f'ports:      {mod.ports}')
@@ -135,21 +152,7 @@ def integ_soc():
 
 
 def main():
-    verible_bin_path = '/home/liaoyuchi/Desktop/verible-v0.0-3410-g398a8505/bin'
-    parser_path = f'{verible_bin_path}/verible-verilog-syntax'
-    format_path = f'{verible_bin_path}/verible-verilog-format'
-    files = sys.argv[1:]
-
-    parser = verible_parser.VeribleParser(exec_path=parser_path)
-    data = parser.parse_files(files)
-
-    for file_path, file_data in data.items():
-        parse_sv_file(file_path, file_data)
-
-    fmt_cfg = '--assignment_statement_alignment align --case_items_alignment align --class_member_variable_alignment align --distribution_items_alignment align --enum_assignment_statement_alignment align --formal_parameters_alignment align --module_net_variable_alignment align --named_parameter_alignment align --named_port_alignment align --port_declarations_alignment align --struct_union_members_alignment align'
-    fmt_cfg += ' --inplace'
-    # print(f'fmt_cfg: {fmt_cfg}')
-    os.system(f'{format_path} {fmt_cfg} sub_system.sv')
+    svfile_parser = SVFileParser()
 
 
 if __name__ == '__main__':
