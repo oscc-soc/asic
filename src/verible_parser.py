@@ -194,6 +194,7 @@ class BranchNode(Node):
         Yields:
           Nodes matching specified filter.
         """
+        # print(f'max_count: {str(max_count)}')
         def as_list(v):
             return v if isinstance(v, list) else [v]
 

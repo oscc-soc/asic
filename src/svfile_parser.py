@@ -31,28 +31,32 @@ import os
 from typing import List
 import anytree
 from verible_parser import VeribleParser, SyntaxData
-from data_type import ModuleInfo, SVFileInfo
+from data_type import PortType, PortDir, SVParam, SVPort, SVModule, SVFile
 import global_para
 
 
 class SVFileParser(object):
     def __init__(self):
-        self.files = []
+        self.src_files = []
+        self.sv_files = []
         self.vb_parser = VeribleParser(global_para.VERIBLE_SYNTAX)
 
-    def update_files(self, path: List[str]):
-        self.files = path
+    def clear(self):
+        self.src_files = []
+        self.sv_files = []
+
+    def update_files(self, files: List[str]):
+        self.src_files = files
 
     def gen_ast(self):
-        res = self.vb_parser.parse_files(self.files)
-        for path, data in res.items():
-            self.parse(path, data)
+        if len(self.src_files) > 0:
+            res = self.vb_parser.parse_files(self.src_files)
+            for path, data in res.items():
+                self.parse(path, data)
 
     def parse(self, path: str, data: SyntaxData):
         if not data.tree:
             return
-
-        file_info = SVFileInfo(path, [], [])
 
         inc_infos = []
         for inc in data.tree.iter_find_all({'tag': ['kPreprocessorInclude']},
@@ -64,7 +68,7 @@ class SVFileParser(object):
         mod_infos = []
         # Collect information about each module declaration in the file
         for module in data.tree.iter_find_all({'tag': 'kModuleDeclaration'}):
-            mod_info = ModuleInfo('', '', [], [])
+            mod_info = SVModule('', '', [], [])
 
             # Find module header
             header = module.find({'tag': 'kModuleHeader'})
@@ -82,28 +86,30 @@ class SVFileParser(object):
 
             mod_info.name = name.text
 
+            # Get the list of parameters
+            for param in header.iter_find_all({'tag': ['kParamDeclaration']}):
+                param_pt = param.find({'tag': ['kParamType']})
+                param_dt = param_pt.find({'tag': ['kTypeInfo']})
+                param_id = param_pt.find({'tag': ['SymbolIdentifier']})
+                param_ta = param.find({'tag': ['kTrailingAssign']})
+                param_defval = param_ta.find({'tag': ['kExpression']})
+                mod_info.params.append(
+                    SVParam(param_dt.text, param_id.text, param_defval.text))
+
             # Get the list of ports
             for port in header.iter_find_all(
                 {'tag': ['kPortDeclaration', 'kPort']}):
-                port_id = port.find(
-                    {'tag': ['SymbolIdentifier', 'EscapedIdentifier']})
-                mod_info.ports.append(port_id.text)
-
-            # Get the list of parameters
-            for param in header.iter_find_all({'tag': ['kParamDeclaration']}):
-                param_id = param.find(
-                    {'tag': ['SymbolIdentifier', 'EscapedIdentifier']})
-                mod_info.paras.append(param_id.text)
-
-            # Get the list of imports
-            # for pkg in module.iter_find_all({'tag': ['kPackageImportItem']}):
-            #     modi
-            #     module_info['imports'].append(pkg.text)
+                port_id = port.find({'tag': ['SymbolIdentifier']})
+                if_node = port.find({'tag': ['kInterfacePortHeader']})
+                if if_node:
+                    mod_info.ports.append(
+                        SVPort(PortType.IF, PortDir.IN, '', port_id.text))
+                else:
+                    mod_info.ports.append(
+                        SVPort(PortType.STD, PortDir.IN, '', port_id.text))
 
             mod_infos.append(mod_info)
-
-        file_info.inc = inc_infos
-        file_info.mod = mod_infos
+        self.sv_files.append(SVFile(path, inc_infos, mod_infos))
 
     def format(self):
         fmt_cfg = '--assignment_statement_alignment align --case_items_alignment align --class_member_variable_alignment align --distribution_items_alignment align --enum_assignment_statement_alignment align --formal_parameters_alignment align --module_net_variable_alignment align --named_parameter_alignment align --named_port_alignment align --port_declarations_alignment align --struct_union_members_alignment align'
@@ -123,16 +129,16 @@ def integ_soc():
 
         for mod in file_info.mod:
             print(f'name:       {mod.name}')
-            print(f'parameters: {mod.paras}')
+            print(f'parameters: {mod.params}')
             print(f'ports:      {mod.ports}')
             # print(f'imports:    {mod["imports"]}')
             # print(f'raw:         {mod.raw}')
 
             res = mod.name
             # res = 'apb4_uart '
-            if len(mod.paras) > 0:
+            if len(mod.params) > 0:
                 res += ' #('
-                for v in enumerate(mod.paras):
+                for v in enumerate(mod.params):
                     if v[0] > 0:
                         res += ','
                     res += f'.{v[1]}({v[1]})'
@@ -153,6 +159,14 @@ def integ_soc():
 
 def main():
     svfile_parser = SVFileParser()
+    svfile_parser.update_files([
+        '/home/liaoyuchi/Desktop/oscc/asic/gen/oscc-t28-202404-soc/perip/uart/rtl/apb4_uart.sv',
+        '/home/liaoyuchi/Desktop/oscc/asic/gen/oscc-t28-202404-soc/perip/uart/rtl/uart_tx.sv'
+    ])
+    svfile_parser.gen_ast()
+
+    for v in svfile_parser.sv_files:
+        print(v)
 
 
 if __name__ == '__main__':

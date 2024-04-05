@@ -12,6 +12,13 @@
 
 from typing import List
 from enum import IntEnum, unique
+from dataclasses import dataclass, field
+
+
+@unique
+class PortType(IntEnum):
+    STD = 0
+    IF = 1
 
 
 @unique
@@ -21,46 +28,31 @@ class PortDir(IntEnum):
     INOUT = 2
 
 
+@dataclass
 class SVParam(object):
-    def __init__(self, name: str, defval: str):
-        self.name = name
-        self.defval = defval
-
-    def __str__(self) -> str:
-        return f'name: {self.name} defval: {self.defval}'
+    dt: str
+    name: str
+    defval: str
 
 
+@dataclass
 class SVPort(object):
-    def __init__(self, dire: PortDir, width: str, name: str):
-        self.dire = dire
-        self.width = width
-        self.name = name
-
-    def __str__(self) -> str:
-        return f'dire: {self.dire} width: {self.width} name: {self.name}'
+    pt: PortType
+    dire: PortDir
+    width: str
+    name: str
 
 
+@dataclass
 class SVModule(object):
-    def __init__(self, name: str, params: List[SVParam], ports: List[SVPort]):
-        self.name = name
-        self.params = params
-        self.ports = ports
-
-    def __str__(self) -> str:
-        info = f'name: {self.name} params: {self.params} ports: {self.ports}'
-        return info
+    raw: str = field(repr=False)
+    name: str
+    params: List[SVParam]
+    ports: List[SVPort]
 
 
+@dataclass
 class SVFile(object):
-    def __init__(
-        self,
-        path: str,
-        inc: List[str],
-        mod: List[SVModule],
-    ):
-        self.path = path
-        self.inc = inc
-        self.mod = mod
-
-    def __str__(self) -> str:
-        return f'path: {self.path} inc: {self.inc} mod: {self.mod}'
+    path: str
+    inc: List[str]
+    mod: List[SVModule]
