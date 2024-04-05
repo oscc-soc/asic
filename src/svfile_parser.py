@@ -31,7 +31,7 @@ import os
 from typing import List
 import anytree
 from verible_parser import VeribleParser, SyntaxData
-from data_type import PortType, PortDir, SVParam, SVPort, SVModule, SVFile
+from data_type import PortType, PortDir, SVInst, SVParam, SVPort, SVModule, SVFile
 import global_para
 
 
@@ -68,7 +68,7 @@ class SVFileParser(object):
         mod_infos = []
         # Collect information about each module declaration in the file
         for module in data.tree.iter_find_all({'tag': 'kModuleDeclaration'}):
-            mod_info = SVModule('', '', [], [])
+            mod_info = SVModule('', '', [], [], [])
 
             # Find module header
             header = module.find({'tag': 'kModuleHeader'})
@@ -107,6 +107,14 @@ class SVFileParser(object):
                 else:
                     mod_info.ports.append(
                         SVPort(PortType.STD, PortDir.IN, '', port_id.text))
+
+            # Get the lists of module insts
+            for v in module.iter_find_all({'tag': ['kGateInstance']}):
+                inst = v.parent.parent
+                inst_it = inst.find({'tag': ['kInstantiationType']})
+                inst_mid = inst_it.find({'tag': ['SymbolIdentifier']})
+                inst_aid = v.find({'tag': ['SymbolIdentifier']})
+                mod_info.insts.append(SVInst(inst_mid.text, inst_aid.text))
 
             mod_infos.append(mod_info)
         self.sv_files.append(SVFile(path, inc_infos, mod_infos))

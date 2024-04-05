@@ -44,11 +44,18 @@ class SVPort(object):
 
 
 @dataclass
+class SVInst(object):
+    mid: str
+    aid: str
+
+
+@dataclass
 class SVModule(object):
     raw: str = field(repr=False)
     name: str
     params: List[SVParam]
     ports: List[SVPort]
+    insts: List[SVInst]
 
 
 @dataclass

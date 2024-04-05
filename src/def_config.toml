@@ -62,19 +62,9 @@ prot = "axi4"
 
 [ip]
 path = "perip"
-perip = ["common", "archinfo", "gpio"]
+perip = ["archinfo", "pwm", "rng", "uart"]
 # tag and commit field is optional
-[ip.common]
-branch = "main"
-commit = "lastest"
-pinmux = false
-
 [ip.archinfo]
-branch = "main"
-commit = "lastest"
-pinmux = false
-
-[ip.gpio]
 branch = "main"
 commit = "lastest"
 pinmux = false
