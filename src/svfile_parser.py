@@ -28,23 +28,24 @@
 
 import sys
 import os
-from typing import List
+from typing import List, Optional
 import anytree
 from verible_parser import VeribleParser, SyntaxData
 from data_type import PortType, PortDir, SVInst, SVParam, SVPort, SVModule, SVFile
-from data_type import SVComponent
 import global_para
 
 
 class SVFileParser(object):
     def __init__(self):
-        self.src_files: List[str] = []
+        self.src_files = []
         self.sv_files = []
+        self.sv_roots = []
         self.vb_parser = VeribleParser(global_para.VERIBLE_SYNTAX)
 
     def clear(self):
         self.src_files = []
         self.sv_files = []
+        self.sv_roots = []
 
     def update_files(self, files: List[str]):
         self.src_files = files
@@ -120,60 +121,52 @@ class SVFileParser(object):
             mod_infos.append(mod_info)
         self.sv_files.append(SVFile(path, inc_infos, mod_infos))
 
-    def format(self):
-        fmt_cfg = '--assignment_statement_alignment align --case_items_alignment align --class_member_variable_alignment align --distribution_items_alignment align --enum_assignment_statement_alignment align --formal_parameters_alignment align --module_net_variable_alignment align --named_parameter_alignment align --named_port_alignment align --port_declarations_alignment align --struct_union_members_alignment align'
-        fmt_cfg += ' --inplace'
-        os.system(f'{global_para.VERIBLE_FORMAT} {fmt_cfg} sub_system.sv')
+    def link_node(self, mod: SVModule,
+                  parent: anytree.Node) -> List[anytree.Node]:
+        childs = []
+        if len(mod.insts) > 0:
+            for inst in mod.insts:
+                child = anytree.Node(f'{inst.mid}__{inst.aid}', None, None)
+                child.parent = parent
+                childs.append(child)
+        return childs
 
+    def gen_tree(self):
+        nodes = []
+        for svfile in self.sv_files:
+            for mod in svfile.mod:  # name, insts
+                # insert the root
+                childs = []
+                is_find = False
+                # print(mod.name)
+                for v in nodes:
+                    if v.name.split('__')[0] == mod.name:
+                        is_find = True
+                        childs = self.link_node(mod, v)
 
-def integ_soc():
-    with open('sub_system.sv', 'w+', encoding='utf-8') as fp:
-        res = 'module sub_system();'
-        fp.writelines(res)
+                if is_find is False:
+                    par = anytree.Node(f'{mod.name}__NONE', None, None)
+                    nodes.append(par)
+                    childs = self.link_node(mod, par)
+                # check if current node is children of previous node
+                nodes += childs
 
-    with open('sub_system.sv', 'a+', encoding='utf-8') as fp:
-        for inc in file_info.inc:
-            print(f'inc: {inc}')
-            fp.writelines(f'`include {inc}')
+        for v in nodes:
+            if v.is_root:
+                self.sv_roots.append(v)
 
-        for mod in file_info.mod:
-            print(f'name:       {mod.name}')
-            print(f'parameters: {mod.params}')
-            print(f'ports:      {mod.ports}')
-            # print(f'imports:    {mod["imports"]}')
-            # print(f'raw:         {mod.raw}')
+        # for root in self.sv_roots:
+        #     print(anytree.RenderTree(root))
 
-            res = mod.name
-            # res = 'apb4_uart '
-            if len(mod.params) > 0:
-                res += ' #('
-                for v in enumerate(mod.params):
-                    if v[0] > 0:
-                        res += ','
-                    res += f'.{v[1]}({v[1]})'
-                res += ')'
+    def find_top(self) -> Optional[SVModule]:
+        for v in self.sv_roots:
+            if 'apb4' or 'axi4' in v.name:
+                for svfile in self.sv_files:
+                    for mod in svfile.mod:
+                        if mod.name == v.name.split('__')[0]:
+                            return mod
+        return None
 
-            res += f' u_{mod.name}('
-            for v in enumerate(mod.ports):
-                if v[0] > 0:
-                    res += ','
-                res += f'.{v[1]}({v[1]})'
-            res += ');'
-            # print(f'res: {res}')
-            fp.writelines(res)
-
-    with open('sub_system.sv', 'a+', encoding='utf-8') as fp:
-        fp.writelines('endmodule')
-
-
-def link_node(mod: SVModule, parent: anytree.Node) -> List[anytree.Node]:
-    childs = []
-    if len(mod.insts) > 0:
-        for inst in mod.insts:
-            child = anytree.Node(f'{inst.mid}__{inst.aid}', None, None)
-            child.parent = parent
-            childs.append(child)
-    return childs
 
 
 def main():
@@ -187,37 +180,10 @@ def main():
         '/home/liaoyuchi/Desktop/oscc/common/rtl/fifo.sv'
     ])
     svfile_parser.gen_ast()
-
+    svfile_parser.gen_tree()
+    print(svfile_parser.find_top())
     # for v in svfile_parser.sv_files:
     # print(v)
-
-    nodes: List[anytree.Node] = []
-    for svfile in svfile_parser.sv_files:
-        for mod in svfile.mod:  # name, insts
-            # insert the root
-            childs = []
-            is_find = False
-            # print(mod.name)
-            for v in nodes:
-                if v.name.split('__')[0] == mod.name:
-                    is_find = True
-                    childs = link_node(mod, v)
-
-            if is_find is False:
-                par = anytree.Node(f'{mod.name}__NONE', None, None)
-                nodes.append(par)
-                childs = link_node(mod, par)
-            # check if current node is children of previous node
-            nodes += childs
-
-    roots = []
-    for v in nodes:
-        if v.is_root:
-            roots.append(v)
-
-    sv_comp = SVComponent(svfile_parser.sv_files, roots)
-    for root in sv_comp.roots:
-        print(anytree.RenderTree(root))
 
 
 if __name__ == '__main__':
