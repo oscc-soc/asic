@@ -13,6 +13,7 @@
 from typing import List
 from enum import IntEnum, unique
 from dataclasses import dataclass, field
+import anytree
 
 
 @unique
@@ -63,3 +64,9 @@ class SVFile(object):
     path: str
     inc: List[str]
     mod: List[SVModule]
+
+
+@dataclass
+class SVComponent(object):
+    files: List[SVFile]
+    roots: List[anytree.Node]

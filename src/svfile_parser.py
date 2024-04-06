@@ -32,12 +32,13 @@ from typing import List
 import anytree
 from verible_parser import VeribleParser, SyntaxData
 from data_type import PortType, PortDir, SVInst, SVParam, SVPort, SVModule, SVFile
+from data_type import SVComponent
 import global_para
 
 
 class SVFileParser(object):
     def __init__(self):
-        self.src_files = []
+        self.src_files: List[str] = []
         self.sv_files = []
         self.vb_parser = VeribleParser(global_para.VERIBLE_SYNTAX)
 
@@ -165,16 +166,58 @@ def integ_soc():
         fp.writelines('endmodule')
 
 
+def link_node(mod: SVModule, parent: anytree.Node) -> List[anytree.Node]:
+    childs = []
+    if len(mod.insts) > 0:
+        for inst in mod.insts:
+            child = anytree.Node(f'{inst.mid}__{inst.aid}', None, None)
+            child.parent = parent
+            childs.append(child)
+    return childs
+
+
 def main():
     svfile_parser = SVFileParser()
     svfile_parser.update_files([
         '/home/liaoyuchi/Desktop/oscc/asic/gen/oscc-t28-202404-soc/perip/uart/rtl/apb4_uart.sv',
-        '/home/liaoyuchi/Desktop/oscc/asic/gen/oscc-t28-202404-soc/perip/uart/rtl/uart_tx.sv'
+        '/home/liaoyuchi/Desktop/oscc/asic/gen/oscc-t28-202404-soc/perip/uart/rtl/uart_tx.sv',
+        '/home/liaoyuchi/Desktop/oscc/asic/gen/oscc-t28-202404-soc/perip/uart/rtl/uart_rx.sv',
+        '/home/liaoyuchi/Desktop/oscc/asic/gen/oscc-t28-202404-soc/perip/uart/rtl/uart_irq.sv',
+        '/home/liaoyuchi/Desktop/oscc/asic/gen/oscc-t28-202404-soc/perip/uart/rtl/uart_define.sv',
+        '/home/liaoyuchi/Desktop/oscc/common/rtl/fifo.sv'
     ])
     svfile_parser.gen_ast()
 
-    for v in svfile_parser.sv_files:
-        print(v)
+    # for v in svfile_parser.sv_files:
+    # print(v)
+
+    nodes: List[anytree.Node] = []
+    for svfile in svfile_parser.sv_files:
+        for mod in svfile.mod:  # name, insts
+            # insert the root
+            childs = []
+            is_find = False
+            # print(mod.name)
+            for v in nodes:
+                if v.name.split('__')[0] == mod.name:
+                    is_find = True
+                    childs = link_node(mod, v)
+
+            if is_find is False:
+                par = anytree.Node(f'{mod.name}__NONE', None, None)
+                nodes.append(par)
+                childs = link_node(mod, par)
+            # check if current node is children of previous node
+            nodes += childs
+
+    roots = []
+    for v in nodes:
+        if v.is_root:
+            roots.append(v)
+
+    sv_comp = SVComponent(svfile_parser.sv_files, roots)
+    for root in sv_comp.roots:
+        print(anytree.RenderTree(root))
 
 
 if __name__ == '__main__':
