@@ -15,6 +15,7 @@ from config_parser import ConfigParser
 import global_para
 from config_type import SoCConfig
 from svfile_parser import SVFileParser
+from svfile_gen import SVFileGen
 
 
 class SoCGen(object):
@@ -70,6 +71,8 @@ class SoCGen(object):
 
         os.chdir(global_para.SRC_DIR)
         svfile_parser = SVFileParser()
+
+        mod_tops = []
         for v in ip_cfg.perip:
             abs_path = f'{self.prj_path}/{ip_cfg.path}/{v}/rtl'
             # print(f'abs_path: {abs_path}')
@@ -79,8 +82,12 @@ class SoCGen(object):
             svfile_parser.clear()
             svfile_parser.update_files(src_files)
             svfile_parser.gen_ast()
-            for v in svfile_parser.sv_files:
-                print(v)
+            svfile_parser.gen_tree()
+            mod_tops.append(svfile_parser.find_top())
+            # svfile_gen.init()
+
+        svfile_gen = SVFileGen(f'{self.prj_path}/top', 'sub_sys', mod_tops)
+        svfile_gen.gen()
 
     def gen_block(self):
         self.gen_core()
