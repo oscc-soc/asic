@@ -32,7 +32,7 @@ class SoCGen(object):
         print(self.prj_path)
 
         # if os.path.exists(self.prj_path):
-            # os.system(f'rm -rf {self.prj_path}')
+        # os.system(f'rm -rf {self.prj_path}')
 
         # os.system(f'mkdir -p {self.prj_path}')
 
@@ -71,11 +71,18 @@ class SoCGen(object):
         os.chdir(global_para.SRC_DIR)
         svfile_parser = SVFileParser()
         for v in ip_cfg.perip:
-            abs_path = f'{self.prj_path}/{ip_cfg.path}/{v}'
-            print(f'abs_path: {abs_path}')
-            svfile_parser.update_files(abs_path)
+            abs_path = f'{self.prj_path}/{ip_cfg.path}/{v}/rtl'
+            # print(f'abs_path: {abs_path}')
+            src_files = os.listdir(abs_path)
+            src_files = [f'{abs_path}/{v}' for v in src_files]
+            # print(f'files: {src_files}')
+            svfile_parser.clear()
+            svfile_parser.update_files(src_files)
+            svfile_parser.gen_ast()
+            for v in svfile_parser.sv_files:
+                print(v)
 
-    def gen_sub_block(self):
+    def gen_block(self):
         self.gen_core()
         self.gen_ram()
         self.gen_filelist()
@@ -93,7 +100,7 @@ def main():
     cfg_parser.check()
     soc_gen = SoCGen(cfg_parser.soc_cfg)
     soc_gen.gen_prj()
-    soc_gen.gen_sub_block()
+    soc_gen.gen_block()
 
 
 main()
